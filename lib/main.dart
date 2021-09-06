@@ -32,8 +32,14 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  GameState gameState = GameState();
-  GameController gameController = GameController();
+  GameState? gameState;
+  GameController gameController = GameController.random(2);
+
+  @override
+  void initState() {
+    super.initState();
+    gameState = gameController.getRandomInitialGameState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,15 +51,15 @@ class _MyHomePageState extends State<MyHomePage> {
         alignment: Alignment.topCenter,
         child: AspectRatio(
           aspectRatio: 1.0,
-          child: Board(
-            gameState: gameState,
+          child: BoardView(
+            gameState: gameState!,
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           setState(() {
-            gameState = gameController.takeTurn(gameState);
+            gameState = gameController.takeTurn(gameState!);
           });
         },
         child: const Icon(Icons.navigation),
@@ -63,8 +69,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class Board extends StatelessWidget {
-  const Board({Key? key, required this.gameState}) : super(key: key);
+class BoardView extends StatelessWidget {
+  const BoardView({Key? key, required this.gameState}) : super(key: key);
 
   final GameState gameState;
 
@@ -82,8 +88,8 @@ class BoardPainter extends CustomPainter {
   void paintBackground(Canvas canvas, Size size, Size cell) {
     var paint = Paint();
     paint.style = PaintingStyle.fill;
-    for (int i = 0; i < kBoardWidth; ++i) {
-      for (int j = 0; j < kBoardHeight; ++j) {
+    for (int i = 0; i < Board.kWidth; ++i) {
+      for (int j = 0; j < Board.kHeight; ++j) {
         paint.color = ((i + j) % 2 == 0) ? Colors.lightBlue : Colors.lightGreen;
         canvas.drawRect(rectForPosition(Position(i, j), cell), paint);
       }
@@ -95,26 +101,72 @@ class BoardPainter extends CustomPainter {
         cell.width, cell.height);
   }
 
-  void paintPlayers(Canvas canvas, Size size, Size cell) {
+  void paintPieces(Canvas canvas, Size size, Size cell) {
     var paint = Paint();
     paint.style = PaintingStyle.fill;
-    for (var player in gameState.players) {
-      var position = player.position;
-      paint.color = player.color;
-      canvas.drawOval(rectForPosition(position, cell), paint);
-    }
+    gameState.board.forEachPiece((position, piece) {
+      paint.color = piece.owner.color;
+      switch (piece.type) {
+        case PieceType.king:
+          canvas.drawOval(rectForPosition(position, cell), paint);
+          break;
+      }
+    });
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    var cellSize = Size(size.width / kBoardWidth, size.height / kBoardHeight);
+    var cellSize = Size(size.width / Board.kWidth, size.height / Board.kHeight);
     paintBackground(canvas, size, cellSize);
-    paintPlayers(canvas, size, cellSize);
+    paintPieces(canvas, size, cellSize);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
+  }
+}
+
+const List<String> kPlayerNames = <String>["Alice", "Bob"];
+const List<Color> kPlayerColors = <Color>[Colors.purple, Colors.yellow];
+
+class GameController {
+  final Map<Player, Agent> agents = <Player, Agent>{};
+
+  GameController();
+
+  factory GameController.random(int playerCount) {
+    var controller = GameController();
+    for (var i = 0; i < playerCount; ++i) {
+      var player = Player(kPlayerNames[i], kPlayerColors[i]);
+      controller.addPlayerWithAgent(player, FirstMover());
+    }
+    return controller;
+  }
+
+  void addPlayerWithAgent(Player player, Agent agent) {
+    agents[player] = agent;
+  }
+
+  GameState getRandomInitialGameState() {
+    var board = Board.empty();
+    var players = agents.keys.toList();
+    for (var player in players) {
+      Position position;
+      do {
+        position = Position.random();
+      } while (board.getAt(position) != null);
+
+      board = board.placeAt(position, Piece(PieceType.king, player));
+    }
+    return GameState(board, players);
+  }
+
+  GameState takeTurn(GameState gameState) {
+    var activePlayer = gameState.activePlayer;
+    var view = AgentView(gameState, activePlayer);
+    var activeAgent = agents[activePlayer]!;
+    return gameState.move(activeAgent.pickMove(view));
   }
 }
 
