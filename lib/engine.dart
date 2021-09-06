@@ -35,7 +35,7 @@ class Position {
     return Position(rng.nextInt(Board.kWidth), rng.nextInt(Board.kHeight));
   }
 
-  Position apply(Delta delta) => Position(x + delta.dy, y + delta.dy);
+  Position apply(Delta delta) => Position(x + delta.dx, y + delta.dy);
   Move move(Delta delta) => Move(this, apply(delta));
 
   @override

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'engine.dart';
-import 'agents.dart';
+import 'agents.dart' as agents;
 
 void main() {
   runApp(const MyApp());
@@ -131,7 +131,7 @@ const List<String> kPlayerNames = <String>["Alice", "Bob"];
 const List<Color> kPlayerColors = <Color>[Colors.purple, Colors.yellow];
 
 class GameController {
-  final Map<Player, Agent> agents = <Player, Agent>{};
+  final Map<Player, Agent> _agents = <Player, Agent>{};
 
   GameController();
 
@@ -139,18 +139,18 @@ class GameController {
     var controller = GameController();
     for (var i = 0; i < playerCount; ++i) {
       var player = Player(kPlayerNames[i], kPlayerColors[i]);
-      controller.addPlayerWithAgent(player, FirstMover());
+      controller.addPlayerWithAgent(player, agents.RandomMover());
     }
     return controller;
   }
 
   void addPlayerWithAgent(Player player, Agent agent) {
-    agents[player] = agent;
+    _agents[player] = agent;
   }
 
   GameState getRandomInitialGameState() {
     var board = Board.empty();
-    var players = agents.keys.toList();
+    var players = _agents.keys.toList();
     for (var player in players) {
       Position position;
       do {
@@ -165,7 +165,7 @@ class GameController {
   GameState takeTurn(GameState gameState) {
     var activePlayer = gameState.activePlayer;
     var view = AgentView(gameState, activePlayer);
-    var activeAgent = agents[activePlayer]!;
+    var activeAgent = _agents[activePlayer]!;
     return gameState.move(activeAgent.pickMove(view));
   }
 }
