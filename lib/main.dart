@@ -33,7 +33,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   GameState? gameState;
-  GameController gameController = GameController.random(2);
+  GameController gameController = GameController.demo();
 
   @override
   void initState() {
@@ -76,7 +76,17 @@ class BoardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: BoardPainter(gameState));
+    var winner = gameState.winner;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CustomPaint(painter: BoardPainter(gameState)),
+        if (winner != null)
+          Container(
+              color: Colors.white.withOpacity(0.6),
+              child: Center(child: Text('A winner is ${winner.name}'))),
+      ],
+    );
   }
 }
 
@@ -127,20 +137,32 @@ class BoardPainter extends CustomPainter {
   }
 }
 
-const List<String> kPlayerNames = <String>["Alice", "Bob"];
-const List<Color> kPlayerColors = <Color>[Colors.purple, Colors.yellow];
-
 class GameController {
   final Map<Player, Agent> _agents = <Player, Agent>{};
 
   GameController();
 
-  factory GameController.random(int playerCount) {
+  factory GameController.demo() {
     var controller = GameController();
-    for (var i = 0; i < playerCount; ++i) {
-      var player = Player(kPlayerNames[i], kPlayerColors[i]);
-      controller.addPlayerWithAgent(player, agents.RandomMover());
-    }
+
+    controller.addPlayerWithAgent(
+        const Player("Random", Colors.purple), agents.RandomMover());
+    controller.addPlayerWithAgent(
+        const Player("Seeker", Colors.orange), agents.Seeker());
+    controller.addPlayerWithAgent(
+        const Player("Runner 1", Colors.yellow), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner 2", Colors.yellow), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner 3", Colors.yellow), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner 4", Colors.yellow), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner 5", Colors.yellow), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner 6", Colors.yellow), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner 7", Colors.yellow), agents.Runner());
     return controller;
   }
 

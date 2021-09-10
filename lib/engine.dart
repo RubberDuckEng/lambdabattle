@@ -10,6 +10,8 @@ class Delta {
   @override
   String toString() => '<Δ$dx, Δ$dy>';
 
+  double get magnitude => sqrt(dx * dx + dy * dy);
+
   @override
   bool operator ==(other) {
     if (other is! Delta) {
@@ -37,6 +39,10 @@ class Position {
 
   Position apply(Delta delta) => Position(x + delta.dx, y + delta.dy);
   Move move(Delta delta) => Move(this, apply(delta));
+
+  Delta deltaTo(Position other) {
+    return Delta(other.x - x, other.y - y);
+  }
 
   @override
   String toString() => '($x, $y)';
@@ -83,7 +89,7 @@ class Player {
   final String name;
   final Color color;
 
-  Player(this.name, this.color);
+  const Player(this.name, this.color);
 
   @override
   String toString() => 'Player[$name]';
@@ -245,9 +251,37 @@ class AgentView {
 
   AgentView(this._gameState, this._player);
 
+  Iterable<Position> getPositions(PieceType type) {
+    List<Position> positions = <Position>[];
+    _gameState.board.forEachPiece((position, piece) {
+      if (piece.owner == _player && piece.type == type) {
+        positions.add(position);
+      }
+    });
+    return positions;
+  }
+
+  Position? closestOpponent(Position position, PieceType type) {
+    Position? bestPosition;
+    double bestDistance = double.infinity;
+    _gameState.board.forEachPiece((currentPosition, piece) {
+      if (piece.owner == _player || piece.type != type) {
+        return;
+      }
+      var currentDistance = position.deltaTo(currentPosition).magnitude;
+      if (currentDistance < bestDistance) {
+        bestDistance = currentDistance;
+        bestPosition = currentPosition;
+      }
+    });
+    return bestPosition;
+  }
+
   Iterable<Move> get legalMoves => _gameState.board.getLegalMoves(_player);
 }
 
 abstract class Agent {
+  const Agent();
+
   Move pickMove(AgentView view);
 }
