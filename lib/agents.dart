@@ -17,6 +17,36 @@ class RandomMover extends Agent {
   }
 }
 
+class Fixate extends Agent {
+  Delta? favorite;
+
+  Move getRandom(List<Move> legalMoves) {
+    var rng = Random();
+    var choices = legalMoves.toList();
+    return choices[rng.nextInt(choices.length)];
+  }
+
+  Move? getMatchingFavorite(List<Move> legalMoves) {
+    var favorite = this.favorite;
+    if (favorite != null) {
+      for (var move in legalMoves) {
+        if (move.delta == favorite) {
+          return move;
+        }
+      }
+    }
+    return null;
+  }
+
+  @override
+  Move pickMove(AgentView view) {
+    var legalMoves = view.legalMoves.toList();
+    var move = getMatchingFavorite(legalMoves) ?? getRandom(legalMoves);
+    favorite = move.delta;
+    return move;
+  }
+}
+
 abstract class DistanceEvaluatorAgent extends Agent {
   bool isBetter(double currentDistance, double bestDistance);
 

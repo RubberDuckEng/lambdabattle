@@ -79,6 +79,8 @@ class Move {
         finalPosition == other.finalPosition;
   }
 
+  Delta get delta => finalPosition.deltaTo(initialPosition);
+
   @override
   int get hashCode {
     return hashValues(initialPosition, finalPosition);
@@ -219,10 +221,13 @@ class Board {
 class GameState {
   final Board board;
   final List<Player> players;
+  static const int turnsUntilDrawDefault = 50;
+  final int turnsUntilDraw;
 
   Player get activePlayer => players.first;
 
-  GameState(this.board, this.players);
+  GameState(this.board, this.players,
+      [this.turnsUntilDraw = turnsUntilDrawDefault]);
 
   GameState move(Move move) {
     var newBoard = board.move(activePlayer, move);
@@ -234,8 +239,15 @@ class GameState {
       }
     }
     newPlayers.add(activePlayer);
-    return GameState(newBoard, newPlayers);
+    var newTurnsUntilDraw = turnsUntilDraw - 1;
+    var playerDied = players.length != newPlayers.length;
+    if (playerDied) {
+      newTurnsUntilDraw = turnsUntilDrawDefault;
+    }
+    return GameState(newBoard, newPlayers, newTurnsUntilDraw);
   }
+
+  bool get isDraw => turnsUntilDraw <= 0;
 
   Player? get winner {
     if (players.length != 1) {
@@ -243,6 +255,8 @@ class GameState {
     }
     return activePlayer;
   }
+
+  bool get isDone => isDraw || winner != null;
 }
 
 class AgentView {

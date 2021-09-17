@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'engine.dart';
 import 'agents.dart' as agents;
+import 'dart:async';
 
 void main() {
   runApp(const MyApp());
@@ -13,11 +14,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Lambda Battle!',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Lambda Battle!'),
     );
   }
 }
@@ -34,6 +35,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   GameState? gameState;
   GameController gameController = GameController.demo();
+  final Map<String, int> wins = <String, int>{};
+
+  Timer? timer;
 
   @override
   void initState() {
@@ -42,27 +46,64 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  void _handleTimer(Timer _) {
+    nextTurn();
+
+    if (gameState?.isDone ?? false) {
+      var name = gameState?.winner?.name ?? "[Draw]";
+      wins[name] = (wins[name] ?? 0) + 1;
+      timer?.cancel();
+      timer = null;
+      _startBattle();
+    }
+  }
+
+  void _startBattle() {
+    gameState = gameController.getRandomInitialGameState();
+    timer = Timer.periodic(const Duration(milliseconds: 1), _handleTimer);
+  }
+
+  void _stopBattle() {
+    setState(() {
+      timer?.cancel();
+      timer = null;
+    });
+  }
+
+  void nextTurn() {
+    setState(() {
+      gameState = gameController.takeTurn(gameState!);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: AspectRatio(
-          aspectRatio: 1.0,
-          child: BoardView(
-            gameState: gameState!,
+      body: Row(children: [
+        Align(
+          alignment: Alignment.topCenter,
+          child: AspectRatio(
+            aspectRatio: 1.0,
+            child: BoardView(
+              gameState: gameState!,
+            ),
           ),
         ),
-      ),
+        LeaderBoard(wins: wins),
+      ]),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            gameState = gameController.takeTurn(gameState!);
-          });
-        },
-        child: const Icon(Icons.navigation),
+        onPressed: timer == null ? _startBattle : _stopBattle,
+        child: timer == null
+            ? const Icon(Icons.play_arrow)
+            : const Icon(Icons.stop),
         backgroundColor: Colors.green,
       ),
     );
@@ -148,21 +189,13 @@ class GameController {
     controller.addPlayerWithAgent(
         const Player("Random", Colors.purple), agents.RandomMover());
     controller.addPlayerWithAgent(
-        const Player("Seeker", Colors.orange), agents.Seeker());
+        const Player("Seeker", Colors.blue), agents.Seeker());
     controller.addPlayerWithAgent(
-        const Player("Runner 1", Colors.yellow), agents.Runner());
+        const Player("Runner", Colors.pink), agents.Runner());
     controller.addPlayerWithAgent(
-        const Player("Runner 2", Colors.yellow), agents.Runner());
+        const Player("FirstMover", Colors.teal), agents.FirstMover());
     controller.addPlayerWithAgent(
-        const Player("Runner 3", Colors.yellow), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner 4", Colors.yellow), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner 5", Colors.yellow), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner 6", Colors.yellow), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner 7", Colors.yellow), agents.Runner());
+        const Player("Fixate", Colors.lime), agents.Fixate());
     return controller;
   }
 
@@ -189,6 +222,20 @@ class GameController {
     var view = AgentView(gameState, activePlayer);
     var activeAgent = _agents[activePlayer]!;
     return gameState.move(activeAgent.pickMove(view));
+  }
+}
+
+class LeaderBoard extends StatelessWidget {
+  final Map<String, int> wins;
+
+  const LeaderBoard({Key? key, required this.wins}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children:
+            wins.entries.map((e) => Text("${e.key}: ${e.value}")).toList());
   }
 }
 
