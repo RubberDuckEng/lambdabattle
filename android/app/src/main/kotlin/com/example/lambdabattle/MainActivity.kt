@@ -1,4 +1,4 @@
-package com.example.lambabattle
+package com.example.lambdabattle
 
 import io.flutter.embedding.android.FlutterActivity
 

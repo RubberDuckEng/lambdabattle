@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
-project(lambabattle LANGUAGES CXX)
+project(lambdabattle LANGUAGES CXX)
 
-set(BINARY_NAME "lambabattle")
+set(BINARY_NAME "lambdabattle")
 
 cmake_policy(SET CMP0063 NEW)
 

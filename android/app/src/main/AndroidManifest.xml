@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.lambabattle">
+    package="com.example.lambdabattle">
    <application
-        android:label="lambabattle"
+        android:label="lambdabattle"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

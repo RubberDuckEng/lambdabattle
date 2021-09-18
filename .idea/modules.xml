@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/lambabattle.iml" filepath="$PROJECT_DIR$/lambabattle.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/lambabattle_android.iml" filepath="$PROJECT_DIR$/android/lambabattle_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/lambdabattle.iml" filepath="$PROJECT_DIR$/lambdabattle.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/lambdabattle_android.iml" filepath="$PROJECT_DIR$/android/lambdabattle_android.iml" />
     </modules>
   </component>
 </project>

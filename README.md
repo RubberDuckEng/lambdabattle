@@ -1,2 +1,2 @@
-# lambabattle
+# lambdabattle
  A coding game
