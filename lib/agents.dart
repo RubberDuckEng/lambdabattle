@@ -65,7 +65,28 @@ class Fixate extends Agent {
   String get name => "Fixate";
 
   @override
-  Color get color => Colors.lime;
+  Color get color => Colors.brown;
+
+  @override
+  void paint(Canvas canvas, Rect rect, PieceType type) {
+    super.paint(canvas, rect, type);
+    var favorite = this.favorite;
+    if (favorite != null) {
+      var paint = Paint();
+      paint.color = Colors.brown.shade900;
+      paint.style = PaintingStyle.stroke;
+      paint.strokeWidth = 4.0;
+      var center = rect.center;
+      var offset = Offset(1.0 * favorite.dx, 1.0 * favorite.dy);
+      offset /= offset.distance;
+      var target = center +
+          Offset(offset.dx * rect.width / 2.0, offset.dy * rect.height / 2.0);
+      var path = Path();
+      path.moveTo(center.dx, center.dy);
+      path.lineTo(target.dx, target.dy);
+      canvas.drawPath(path, paint);
+    }
+  }
 
   @override
   Move pickMove(AgentView view) {
@@ -91,6 +112,8 @@ Move _findMoveByDistanceToTarget(AgentView view, Position targetPosition,
 }
 
 class Seeker extends Agent {
+  Delta? target;
+
   @override
   String get name => "Seeker";
 
@@ -98,16 +121,34 @@ class Seeker extends Agent {
   Color get color => Colors.blue;
 
   @override
+  void paint(Canvas canvas, Rect rect, PieceType type) {
+    super.paint(canvas, rect, type);
+    var target = this.target;
+    if (target != null) {
+      var paint = Paint();
+      paint.color = color;
+      paint.style = PaintingStyle.stroke;
+      paint.strokeWidth = 4.0;
+      var offset = Offset(target.dx * rect.width, target.dy * rect.height);
+      var reticle = rect.translate(offset.dx, offset.dy);
+      canvas.drawOval(reticle.inflate(3.0), paint);
+    }
+  }
+
+  @override
   Move pickMove(AgentView view) {
     var initialPosition = view.getPositions(PieceType.king).first;
     var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
     if (targetPosition == null) {
+      target = null;
       return _findRandomMove(view.legalMoves);
     }
-    return _findMoveByDistanceToTarget(view, targetPosition,
+    var move = _findMoveByDistanceToTarget(view, targetPosition,
         (double currentDistance, double bestDistance) {
       return currentDistance < bestDistance;
     });
+    target = move.finalPosition.deltaTo(targetPosition);
+    return move;
   }
 }
 

@@ -91,7 +91,7 @@ class _BattlePageState extends State<BattlePage> {
           AspectRatio(
             aspectRatio: 1.0,
             child: BoardView(
-              gameState: gameState!,
+              gameState: gameState,
             ),
           ),
           Flexible(
@@ -155,15 +155,8 @@ class BoardPainter extends CustomPainter {
   }
 
   void paintPieces(Canvas canvas, Size size, Size cell) {
-    var paint = Paint();
-    paint.style = PaintingStyle.fill;
     gameState.board.forEachPiece((position, piece) {
-      paint.color = piece.owner.color;
-      switch (piece.type) {
-        case PieceType.king:
-          canvas.drawOval(rectForPosition(position, cell), paint);
-          break;
-      }
+      piece.owner.paint(canvas, rectForPosition(position, cell), piece.type);
     });
   }
 
@@ -181,17 +174,11 @@ class BoardPainter extends CustomPainter {
 }
 
 class GameController {
-  final Map<Player, Agent> _agents = <Player, Agent>{};
+  final List<Agent> _agents;
 
-  GameController();
+  GameController() : _agents = <Agent>[];
 
-  factory GameController.withAgents(List<Agent> agents) {
-    var controller = GameController();
-    for (var agent in agents) {
-      controller.addPlayerWithAgent(Player(agent.name, agent.color), agent);
-    }
-    return controller;
-  }
+  GameController.withAgents(this._agents);
 
   factory GameController.withRandomAgents(int numberOfPlayers) {
     var rng = Random();
@@ -199,14 +186,9 @@ class GameController {
         (index) => agents.all[rng.nextInt(agents.all.length)]()));
   }
 
-  void addPlayerWithAgent(Player player, Agent agent) {
-    _agents[player] = agent;
-  }
-
   GameState getRandomInitialGameState() {
     var board = Board.empty();
-    var players = _agents.keys.toList();
-    for (var player in players) {
+    for (var player in _agents) {
       Position position;
       do {
         position = Position.random();
@@ -214,13 +196,13 @@ class GameController {
 
       board = board.placeAt(position, Piece(PieceType.king, player));
     }
-    return GameState(board, players);
+    return GameState(board, List<Player>.from(_agents));
   }
 
   GameState takeTurn(GameState gameState) {
     var activePlayer = gameState.activePlayer;
     var view = AgentView(gameState, activePlayer);
-    var activeAgent = _agents[activePlayer]!;
+    var activeAgent = activePlayer as Agent;
     return gameState.move(activeAgent.pickMove(view));
   }
 }

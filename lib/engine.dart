@@ -79,7 +79,7 @@ class Move {
         finalPosition == other.finalPosition;
   }
 
-  Delta get delta => finalPosition.deltaTo(initialPosition);
+  Delta get delta => initialPosition.deltaTo(finalPosition);
 
   @override
   int get hashCode {
@@ -87,11 +87,21 @@ class Move {
   }
 }
 
-class Player {
-  final String name;
-  final Color color;
+abstract class Player {
+  String get name;
+  Color get color;
 
-  const Player(this.name, this.color);
+  const Player();
+
+  void paint(Canvas canvas, Rect rect, PieceType type) {
+    var paint = Paint();
+    paint.style = PaintingStyle.fill;
+    paint.color = color;
+    switch (type) {
+      case PieceType.king:
+        canvas.drawOval(rect, paint);
+    }
+  }
 
   @override
   String toString() => 'Player[$name]';
@@ -310,11 +320,8 @@ class GameHistory {
   }
 }
 
-abstract class Agent {
+abstract class Agent extends Player {
   const Agent();
-
-  String get name;
-  Color get color;
 
   Move pickMove(AgentView view);
 }
