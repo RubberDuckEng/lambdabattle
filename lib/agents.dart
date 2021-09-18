@@ -8,23 +8,21 @@ class FirstMover extends Agent {
   }
 }
 
+Move findRandomMove(Iterable<Move> legalMoves) {
+  var rng = Random();
+  var choices = legalMoves.toList();
+  return choices[rng.nextInt(choices.length)];
+}
+
 class RandomMover extends Agent {
   @override
   Move pickMove(AgentView view) {
-    var rng = Random();
-    var choices = view.legalMoves.toList();
-    return choices[rng.nextInt(choices.length)];
+    return findRandomMove(view.legalMoves);
   }
 }
 
 class Fixate extends Agent {
   Delta? favorite;
-
-  Move getRandom(List<Move> legalMoves) {
-    var rng = Random();
-    var choices = legalMoves.toList();
-    return choices[rng.nextInt(choices.length)];
-  }
 
   Move? getMatchingFavorite(List<Move> legalMoves) {
     var favorite = this.favorite;
@@ -41,46 +39,72 @@ class Fixate extends Agent {
   @override
   Move pickMove(AgentView view) {
     var legalMoves = view.legalMoves.toList();
-    var move = getMatchingFavorite(legalMoves) ?? getRandom(legalMoves);
+    var move = getMatchingFavorite(legalMoves) ?? findRandomMove(legalMoves);
     favorite = move.delta;
     return move;
   }
 }
 
-abstract class DistanceEvaluatorAgent extends Agent {
-  bool isBetter(double currentDistance, double bestDistance);
+Move findMoveByDistanceToTarget(AgentView view, Position targetPosition,
+    bool Function(double currentDistance, double bestDistance) isBetter) {
+  Move? bestMove;
+  double? bestDistance;
+  for (var move in view.legalMoves) {
+    var currentDistance = move.finalPosition.deltaTo(targetPosition).magnitude;
+    if (bestDistance == null || isBetter(currentDistance, bestDistance)) {
+      bestDistance = currentDistance;
+      bestMove = move;
+    }
+  }
+  return bestMove!;
+}
 
+class Seeker extends Agent {
   @override
   Move pickMove(AgentView view) {
-    var myKing = view.getPositions(PieceType.king).first;
-    var targetPosition = view.closestOpponent(myKing, PieceType.king);
+    var initialPosition = view.getPositions(PieceType.king).first;
+    var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
     if (targetPosition == null) {
-      return view.legalMoves.first;
+      return findRandomMove(view.legalMoves);
     }
-    Move? bestMove;
-    double? bestDistance;
+    return findMoveByDistanceToTarget(view, targetPosition,
+        (double currentDistance, double bestDistance) {
+      return currentDistance < bestDistance;
+    });
+  }
+}
+
+class Runner extends Agent {
+  @override
+  Move pickMove(AgentView view) {
+    var initialPosition = view.getPositions(PieceType.king).first;
+    var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
+    if (targetPosition == null) {
+      return findRandomMove(view.legalMoves);
+    }
+    return findMoveByDistanceToTarget(view, targetPosition,
+        (double currentDistance, double bestDistance) {
+      return currentDistance > bestDistance;
+    });
+  }
+}
+
+class Opportunist extends Agent {
+  @override
+  Move pickMove(AgentView view) {
+    var initialPosition = view.getPositions(PieceType.king).first;
+    var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
+    if (targetPosition == null) {
+      return findRandomMove(view.legalMoves);
+    }
     for (var move in view.legalMoves) {
-      var currentDistance =
-          move.finalPosition.deltaTo(targetPosition).magnitude;
-      if (bestDistance == null || isBetter(currentDistance, bestDistance)) {
-        bestDistance = currentDistance;
-        bestMove = move;
+      if (move.finalPosition == targetPosition) {
+        return move;
       }
     }
-    return bestMove!;
-  }
-}
-
-class Seeker extends DistanceEvaluatorAgent {
-  @override
-  bool isBetter(double currentDistance, double bestDistance) {
-    return currentDistance < bestDistance;
-  }
-}
-
-class Runner extends DistanceEvaluatorAgent {
-  @override
-  bool isBetter(double currentDistance, double bestDistance) {
-    return currentDistance > bestDistance;
+    return findMoveByDistanceToTarget(view, targetPosition,
+        (double currentDistance, double bestDistance) {
+      return currentDistance > bestDistance;
+    });
   }
 }

@@ -23,6 +23,20 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class GameHistory {
+  final Map<String, double> wins = <String, double>{};
+  int gameCount = 0;
+
+  void recordGame(GameState gameState) {
+    var pointsPerPlayer = 1.0 / gameState.players.length;
+    for (var player in gameState.players) {
+      var name = player.name;
+      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
+      gameCount += 1;
+    }
+  }
+}
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
 
@@ -35,7 +49,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   GameState? gameState;
   GameController gameController = GameController.demo();
-  final Map<String, int> wins = <String, int>{};
+  final history = GameHistory();
 
   Timer? timer;
 
@@ -54,9 +68,12 @@ class _MyHomePageState extends State<MyHomePage> {
   void _handleTimer(Timer _) {
     nextTurn();
 
-    if (gameState?.isDone ?? false) {
-      var name = gameState?.winner?.name ?? "[Draw]";
-      wins[name] = (wins[name] ?? 0) + 1;
+    var gameState = this.gameState;
+    if (gameState == null) {
+      return;
+    }
+    if (gameState.isDone) {
+      history.recordGame(gameState);
       timer?.cancel();
       timer = null;
       _startBattle();
@@ -97,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
         ),
-        LeaderBoard(wins: wins),
+        LeaderBoard(history: history),
       ]),
       floatingActionButton: FloatingActionButton(
         onPressed: timer == null ? _startBattle : _stopBattle,
@@ -141,7 +158,7 @@ class BoardPainter extends CustomPainter {
     paint.style = PaintingStyle.fill;
     for (int i = 0; i < Board.kWidth; ++i) {
       for (int j = 0; j < Board.kHeight; ++j) {
-        paint.color = ((i + j) % 2 == 0) ? Colors.lightBlue : Colors.lightGreen;
+        paint.color = ((i + j) % 2 == 0) ? Colors.black12 : Colors.black26;
         canvas.drawRect(rectForPosition(Position(i, j), cell), paint);
       }
     }
@@ -187,15 +204,27 @@ class GameController {
     var controller = GameController();
 
     controller.addPlayerWithAgent(
-        const Player("Random", Colors.purple), agents.RandomMover());
+        const Player("Opportunist", Colors.green), agents.Opportunist());
+    // controller.addPlayerWithAgent(
+    //     const Player("Random", Colors.purple), agents.RandomMover());
     controller.addPlayerWithAgent(
         const Player("Seeker", Colors.blue), agents.Seeker());
     controller.addPlayerWithAgent(
-        const Player("Runner", Colors.pink), agents.Runner());
+        const Player("Runner1", Colors.pink), agents.Runner());
     controller.addPlayerWithAgent(
-        const Player("FirstMover", Colors.teal), agents.FirstMover());
+        const Player("Runner2", Colors.pink), agents.Runner());
     controller.addPlayerWithAgent(
-        const Player("Fixate", Colors.lime), agents.Fixate());
+        const Player("Runner3", Colors.pink), agents.Runner());
+    controller.addPlayerWithAgent(
+        const Player("Runner4", Colors.pink), agents.Runner());
+    // controller.addPlayerWithAgent(
+    //     const Player("Runner5", Colors.pink), agents.Runner());
+    // controller.addPlayerWithAgent(
+    //     const Player("Runner6", Colors.pink), agents.Runner());
+    // controller.addPlayerWithAgent(
+    //     const Player("FirstMover", Colors.teal), agents.FirstMover());
+    // controller.addPlayerWithAgent(
+    //     const Player("Fixate", Colors.lime), agents.Fixate());
     return controller;
   }
 
@@ -226,16 +255,18 @@ class GameController {
 }
 
 class LeaderBoard extends StatelessWidget {
-  final Map<String, int> wins;
+  final GameHistory history;
 
-  const LeaderBoard({Key? key, required this.wins}) : super(key: key);
+  const LeaderBoard({Key? key, required this.history}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children:
-            wins.entries.map((e) => Text("${e.key}: ${e.value}")).toList());
+        children: [Text("[Game count: ${history.gameCount}]")] +
+            history.wins.entries
+                .map((e) => Text("${e.key}: ${e.value / history.gameCount}"))
+                .toList());
   }
 }
 
