@@ -261,12 +261,20 @@ class LeaderBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String asPercent(double value) {
+      var percent = (value / history.gameCount) * 100;
+      return "${percent.toStringAsFixed(1)}%";
+    }
+
+    var entries = history.wins.entries.toList();
+    entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
+
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [Text("[Game count: ${history.gameCount}]")] +
-            history.wins.entries
-                .map((e) => Text("${e.key}: ${e.value / history.gameCount}"))
-                .toList());
+        children: entries
+                .map((e) => Text("${e.key}: ${asPercent(e.value)}"))
+                .toList() +
+            [Text("\n[Game count: ${history.gameCount}]")]);
   }
 }
 
