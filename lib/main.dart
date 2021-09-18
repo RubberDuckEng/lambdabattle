@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_const
+
 import 'package:flutter/material.dart';
 import 'engine.dart';
 import 'agents.dart' as agents;
@@ -20,20 +22,6 @@ class MyApp extends StatelessWidget {
       ),
       home: const MyHomePage(title: 'Lambda Battle!'),
     );
-  }
-}
-
-class GameHistory {
-  final Map<String, double> wins = <String, double>{};
-  int gameCount = 0;
-
-  void recordGame(GameState gameState) {
-    var pointsPerPlayer = 1.0 / gameState.players.length;
-    for (var player in gameState.players) {
-      var name = player.name;
-      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
-      gameCount += 1;
-    }
   }
 }
 
@@ -104,18 +92,21 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Row(children: [
-        Align(
-          alignment: Alignment.topCenter,
-          child: AspectRatio(
+      body: Row(
+        children: [
+          AspectRatio(
             aspectRatio: 1.0,
             child: BoardView(
               gameState: gameState!,
             ),
           ),
-        ),
-        LeaderBoard(history: history),
-      ]),
+          Flexible(
+            child: Center(
+              child: LeaderBoard(history: history),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: timer == null ? _startBattle : _stopBattle,
         child: timer == null
@@ -269,12 +260,58 @@ class LeaderBoard extends StatelessWidget {
     var entries = history.wins.entries.toList();
     entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
 
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: entries
-                .map((e) => Text("${e.key}: ${asPercent(e.value)}"))
-                .toList() +
-            [Text("\n[Game count: ${history.gameCount}]")]);
+    return SizedBox(
+        width: 200,
+        child: Table(
+          border: const TableBorder(
+              top: BorderSide(color: Colors.black26),
+              bottom: BorderSide(color: Colors.black26),
+              right: BorderSide(color: Colors.black26),
+              left: BorderSide(color: Colors.black26),
+              verticalInside: BorderSide(color: Colors.black26)),
+          children: <TableRow>[
+                const TableRow(
+                  decoration: const BoxDecoration(
+                      color: Colors.black12,
+                      border:
+                          Border(bottom: BorderSide(color: Colors.black26))),
+                  children: <Widget>[
+                    const TableCell(
+                      child: const Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: const Text("Player"),
+                      ),
+                    ),
+                    const TableCell(
+                      child: const Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: const Text("Score"),
+                      ),
+                    ),
+                  ],
+                ),
+              ] +
+              entries
+                  .map(
+                    (e) => TableRow(
+                      children: <Widget>[
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(e.key),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(asPercent(e.value)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  .toList(),
+        ));
   }
 }
 

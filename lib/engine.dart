@@ -294,6 +294,20 @@ class AgentView {
   Iterable<Move> get legalMoves => _gameState.board.getLegalMoves(_player);
 }
 
+class GameHistory {
+  final Map<String, double> wins = <String, double>{};
+  int gameCount = 0;
+
+  void recordGame(GameState gameState) {
+    var pointsPerPlayer = 1.0 / gameState.players.length;
+    for (var player in gameState.players) {
+      var name = player.name;
+      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
+      gameCount += 1;
+    }
+  }
+}
+
 abstract class Agent {
   const Agent();
 
