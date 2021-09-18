@@ -229,6 +229,8 @@ class GameState {
   GameState(this.board, this.players,
       [this.turnsUntilDraw = turnsUntilDrawDefault]);
 
+  GameState.empty() : this(Board.empty(), const <Player>[]);
+
   GameState move(Move move) {
     var newBoard = board.move(activePlayer, move);
     var newPlayers = <Player>[];
@@ -310,6 +312,9 @@ class GameHistory {
 
 abstract class Agent {
   const Agent();
+
+  String get name;
+  Color get color;
 
   Move pickMove(AgentView view);
 }

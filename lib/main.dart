@@ -1,16 +1,17 @@
 // ignore_for_file: unnecessary_const
 
-import 'package:flutter/material.dart';
-import 'engine.dart';
 import 'agents.dart' as agents;
 import 'dart:async';
+import 'dart:math';
+import 'engine.dart';
+import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const LambdaBattle());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class LambdaBattle extends StatelessWidget {
+  const LambdaBattle({Key? key}) : super(key: key);
 
   // This widget is the root of your application.
   @override
@@ -20,32 +21,26 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Lambda Battle!'),
+      home: const BattlePage(title: 'Lambda Battle!'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
+class BattlePage extends StatefulWidget {
+  const BattlePage({Key? key, required this.title}) : super(key: key);
 
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<BattlePage> createState() => _BattlePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  GameState? gameState;
-  GameController gameController = GameController.demo();
+class _BattlePageState extends State<BattlePage> {
+  GameState gameState = GameState.empty();
+  GameController gameController = GameController();
   final history = GameHistory();
 
   Timer? timer;
-
-  @override
-  void initState() {
-    super.initState();
-    gameState = gameController.getRandomInitialGameState();
-  }
 
   @override
   void dispose() {
@@ -56,10 +51,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void _handleTimer(Timer _) {
     nextTurn();
 
-    var gameState = this.gameState;
-    if (gameState == null) {
-      return;
-    }
     if (gameState.isDone) {
       history.recordGame(gameState);
       timer?.cancel();
@@ -69,7 +60,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _startBattle() {
-    gameState = gameController.getRandomInitialGameState();
+    setState(() {
+      gameController = GameController.withRandomAgents(5);
+      gameState = gameController.getRandomInitialGameState();
+    });
     timer = Timer.periodic(const Duration(milliseconds: 1), _handleTimer);
   }
 
@@ -82,7 +76,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void nextTurn() {
     setState(() {
-      gameState = gameController.takeTurn(gameState!);
+      gameState = gameController.takeTurn(gameState);
     });
   }
 
@@ -191,32 +185,18 @@ class GameController {
 
   GameController();
 
-  factory GameController.demo() {
+  factory GameController.withAgents(List<Agent> agents) {
     var controller = GameController();
-
-    controller.addPlayerWithAgent(
-        const Player("Opportunist", Colors.green), agents.Opportunist());
-    // controller.addPlayerWithAgent(
-    //     const Player("Random", Colors.purple), agents.RandomMover());
-    controller.addPlayerWithAgent(
-        const Player("Seeker", Colors.blue), agents.Seeker());
-    controller.addPlayerWithAgent(
-        const Player("Runner1", Colors.pink), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner2", Colors.pink), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner3", Colors.pink), agents.Runner());
-    controller.addPlayerWithAgent(
-        const Player("Runner4", Colors.pink), agents.Runner());
-    // controller.addPlayerWithAgent(
-    //     const Player("Runner5", Colors.pink), agents.Runner());
-    // controller.addPlayerWithAgent(
-    //     const Player("Runner6", Colors.pink), agents.Runner());
-    // controller.addPlayerWithAgent(
-    //     const Player("FirstMover", Colors.teal), agents.FirstMover());
-    // controller.addPlayerWithAgent(
-    //     const Player("Fixate", Colors.lime), agents.Fixate());
+    for (var agent in agents) {
+      controller.addPlayerWithAgent(Player(agent.name, agent.color), agent);
+    }
     return controller;
+  }
+
+  factory GameController.withRandomAgents(int numberOfPlayers) {
+    var rng = Random();
+    return GameController.withAgents(List<Agent>.generate(numberOfPlayers,
+        (index) => agents.all[rng.nextInt(agents.all.length)]()));
   }
 
   void addPlayerWithAgent(Player player, Agent agent) {
@@ -250,8 +230,14 @@ class LeaderBoard extends StatelessWidget {
 
   const LeaderBoard({Key? key, required this.history}) : super(key: key);
 
+  static const double _kWidth = 230;
+
   @override
   Widget build(BuildContext context) {
+    if (history.wins.isEmpty) {
+      return const SizedBox(
+          width: _kWidth, child: Text("Tap play to gather data."));
+    }
     String asPercent(double value) {
       var percent = (value / history.gameCount) * 100;
       return "${percent.toStringAsFixed(1)}%";
@@ -261,7 +247,7 @@ class LeaderBoard extends StatelessWidget {
     entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
 
     return SizedBox(
-        width: 200,
+        width: _kWidth,
         child: Table(
           border: const TableBorder(
               top: BorderSide(color: Colors.black26),
@@ -314,9 +300,3 @@ class LeaderBoard extends StatelessWidget {
         ));
   }
 }
-
-// Goals:
-// Draw a board
-// GameState object
-// Take turns / query the agent for a move.
-// Write an "agent" / "piece"
