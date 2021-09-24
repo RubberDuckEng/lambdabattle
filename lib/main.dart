@@ -64,7 +64,7 @@ class _BattlePageState extends State<BattlePage> {
       gameController = GameController.withRandomAgents(5);
       gameState = gameController.getRandomInitialGameState();
     });
-    timer = Timer.periodic(const Duration(milliseconds: 1), _handleTimer);
+    timer = Timer.periodic(const Duration(milliseconds: 5), _handleTimer);
   }
 
   void _stopBattle() {
@@ -196,7 +196,7 @@ class GameController {
 
       board = board.placeAt(position, Piece(PieceType.king, player));
     }
-    return GameState(board, List<Player>.from(_agents));
+    return GameState(board, List<Player>.from(_agents), []);
   }
 
   GameState takeTurn(GameState gameState) {
@@ -253,7 +253,13 @@ class LeaderBoard extends StatelessWidget {
                     const TableCell(
                       child: const Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: const Text("Score"),
+                        child: const Text("Percent"),
+                      ),
+                    ),
+                    const TableCell(
+                      child: const Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: const Text("ELO"),
                       ),
                     ),
                   ],
@@ -273,6 +279,14 @@ class LeaderBoard extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Text(asPercent(e.value)),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(history
+                                .currentRatingForName(e.key)
+                                .toStringAsFixed(0)),
                           ),
                         ),
                       ],

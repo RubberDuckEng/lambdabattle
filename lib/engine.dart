@@ -230,24 +230,30 @@ class Board {
 
 class GameState {
   final Board board;
+  // In move order.
   final List<Player> players;
+  // In death order.
+  final List<Player> deadPlayers;
   static const int turnsUntilDrawDefault = 50;
   final int turnsUntilDraw;
 
   Player get activePlayer => players.first;
 
-  GameState(this.board, this.players,
+  GameState(this.board, this.players, this.deadPlayers,
       [this.turnsUntilDraw = turnsUntilDrawDefault]);
 
-  GameState.empty() : this(Board.empty(), const <Player>[]);
+  GameState.empty() : this(Board.empty(), const <Player>[], const <Player>[]);
 
   GameState move(Move move) {
     var newBoard = board.move(activePlayer, move);
     var newPlayers = <Player>[];
+    var newDeadPlayers = List<Player>.from(deadPlayers);
     for (var i = 1; i < players.length; ++i) {
       var player = players[i];
       if (newBoard.isAlive(player)) {
         newPlayers.add(player);
+      } else {
+        newDeadPlayers.add(player);
       }
     }
     newPlayers.add(activePlayer);
@@ -256,7 +262,7 @@ class GameState {
     if (playerDied) {
       newTurnsUntilDraw = turnsUntilDrawDefault;
     }
-    return GameState(newBoard, newPlayers, newTurnsUntilDraw);
+    return GameState(newBoard, newPlayers, newDeadPlayers, newTurnsUntilDraw);
   }
 
   bool get isDraw => turnsUntilDraw <= 0;
@@ -306,9 +312,42 @@ class AgentView {
   Iterable<Move> get legalMoves => _gameState.board.getLegalMoves(_player);
 }
 
+const double kValue = 16.0;
+const double initialRating = 500.0;
+
 class GameHistory {
   final Map<String, double> wins = <String, double>{};
   int gameCount = 0;
+
+  final Map<String, double> rating = <String, double>{};
+
+  double expectedScore(double currentRating, double opponentRating) {
+    var exponent = (opponentRating - currentRating) / 400.0;
+    return 1.0 / (1.0 + pow(10.0, exponent));
+  }
+
+  double pointsToTransfer(double score, double expectedScore) {
+    return kValue * (score - expectedScore);
+  }
+
+  double currentRatingForName(String name) {
+    return rating[name] ?? initialRating;
+  }
+
+  double currentRating(Player player) => currentRatingForName(player.name);
+
+  void adjustRating(Player player, double delta) {
+    rating[player.name] = currentRating(player) + delta;
+  }
+
+  void updateRating(Player winner, Player loser, double score) {
+    var winnerRating = currentRating(winner);
+    var loserRating = currentRating(loser);
+    var stake =
+        pointsToTransfer(score, expectedScore(winnerRating, loserRating));
+    adjustRating(winner, stake);
+    adjustRating(loser, -stake);
+  }
 
   void recordGame(GameState gameState) {
     var pointsPerPlayer = 1.0 / gameState.players.length;
@@ -316,6 +355,25 @@ class GameHistory {
       var name = player.name;
       wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
       gameCount += 1;
+    }
+    // http://www.tckerrigan.com/Misc/Multiplayer_Elo/
+    // record dead players as losing against the next dead.
+    for (var i = 0; i < gameState.deadPlayers.length - 1; i++) {
+      var winner = gameState.deadPlayers[i + 1];
+      var loser = gameState.deadPlayers[i];
+      updateRating(winner, loser, 1.0); // win
+    }
+    var alivePlayers = List.from(gameState.players);
+    alivePlayers.shuffle();
+    // record last dead player as losing against random alive player?
+    if (gameState.deadPlayers.isNotEmpty) {
+      updateRating(alivePlayers.first, gameState.deadPlayers.last, 1.0); // win
+    }
+    // record alive players in a cycle of draws.
+    for (var i = 0; i < alivePlayers.length; i++) {
+      for (var j = i + 1; j < alivePlayers.length; j++) {
+        updateRating(alivePlayers[i], alivePlayers[j], 0.5); // draw
+      }
     }
   }
 }
