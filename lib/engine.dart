@@ -11,6 +11,7 @@ class Delta {
   String toString() => '<Δ$dx, Δ$dy>';
 
   double get magnitude => sqrt(dx * dx + dy * dy);
+  int get walkingDistance => max(dx.abs(), dy.abs());
 
   @override
   bool operator ==(other) {
@@ -283,14 +284,26 @@ class AgentView {
 
   AgentView(this._gameState, this._player);
 
-  Iterable<Position> getPositions(PieceType type) {
+  List<Position> _getPositionsIf(bool Function(Piece piece) predicate) {
     List<Position> positions = <Position>[];
     _gameState.board.forEachPiece((position, piece) {
-      if (piece.owner == _player && piece.type == type) {
+      if (predicate(piece)) {
         positions.add(position);
       }
     });
     return positions;
+  }
+
+  List<Position> getPositions(PieceType type) {
+    return _getPositionsIf(
+      (piece) => piece.owner == _player && piece.type == type,
+    );
+  }
+
+  List<Position> enemyPositions(PieceType type) {
+    return _getPositionsIf(
+      (piece) => piece.owner != _player && piece.type == type,
+    );
   }
 
   Position? closestOpponent(Position position, PieceType type) {
