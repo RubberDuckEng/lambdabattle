@@ -29,8 +29,8 @@ class FirstMover extends Agent {
 }
 
 Move _findRandomMove(Iterable<Move> legalMoves) {
-  var rng = Random();
-  var choices = legalMoves.toList();
+  final rng = Random();
+  final List<Move> choices = legalMoves.toList();
   return choices[rng.nextInt(choices.length)];
 }
 
@@ -51,9 +51,9 @@ class Fixate extends Agent {
   Delta? favorite;
 
   Move? getMatchingFavorite(List<Move> legalMoves) {
-    var favorite = this.favorite;
+    Delta? favorite = this.favorite;
     if (favorite != null) {
-      for (var move in legalMoves) {
+      for (final move in legalMoves) {
         if (move.delta == favorite) {
           return move;
         }
@@ -71,18 +71,18 @@ class Fixate extends Agent {
   @override
   void paint(Canvas canvas, Rect rect, PieceType type) {
     super.paint(canvas, rect, type);
-    var favorite = this.favorite;
+    final favorite = this.favorite;
     if (favorite != null) {
-      var paint = Paint();
+      final paint = Paint();
       paint.color = Colors.brown.shade900;
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = 4.0;
-      var center = rect.center;
-      var offset = Offset(1.0 * favorite.dx, 1.0 * favorite.dy);
+      final center = rect.center;
+      Offset offset = Offset(1.0 * favorite.dx, 1.0 * favorite.dy);
       offset /= offset.distance;
-      var target = center +
+      final target = center +
           Offset(offset.dx * rect.width / 2.0, offset.dy * rect.height / 2.0);
-      var path = Path();
+      final path = Path();
       path.moveTo(center.dx, center.dy);
       path.lineTo(target.dx, target.dy);
       canvas.drawPath(path, paint);
@@ -91,8 +91,8 @@ class Fixate extends Agent {
 
   @override
   Move pickMove(AgentView view) {
-    var legalMoves = view.legalMoves.toList();
-    var move = getMatchingFavorite(legalMoves) ?? _findRandomMove(legalMoves);
+    final legalMoves = view.legalMoves.toList();
+    final move = getMatchingFavorite(legalMoves) ?? _findRandomMove(legalMoves);
     favorite = move.delta;
     return move;
   }
@@ -102,8 +102,8 @@ Move _findMoveByDistanceToTarget(AgentView view, Position targetPosition,
     bool Function(double currentDistance, double bestDistance) isBetter) {
   Move? bestMove;
   double? bestDistance;
-  for (var move in view.legalMoves) {
-    var currentDistance = move.finalPosition.deltaTo(targetPosition).magnitude;
+  for (final move in view.legalMoves) {
+    final currentDistance = move.finalPosition.deltaTo(targetPosition).magnitude;
     if (bestDistance == null || isBetter(currentDistance, bestDistance)) {
       bestDistance = currentDistance;
       bestMove = move;
@@ -124,27 +124,27 @@ class Seeker extends Agent {
   @override
   void paint(Canvas canvas, Rect rect, PieceType type) {
     super.paint(canvas, rect, type);
-    var target = this.target;
+    final target = this.target;
     if (target != null) {
-      var paint = Paint();
+      final paint = Paint();
       paint.color = color;
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = 4.0;
-      var offset = Offset(target.dx * rect.width, target.dy * rect.height);
-      var reticle = rect.translate(offset.dx, offset.dy);
+      final offset = Offset(target.dx * rect.width, target.dy * rect.height);
+      final reticle = rect.translate(offset.dx, offset.dy);
       canvas.drawOval(reticle.inflate(3.0), paint);
     }
   }
 
   @override
   Move pickMove(AgentView view) {
-    var initialPosition = view.getPositions(PieceType.king).first;
-    var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
+    final initialPosition = view.getPositions(PieceType.king).first;
+    final targetPosition = view.closestOpponent(initialPosition, PieceType.king);
     if (targetPosition == null) {
       target = null;
       return _findRandomMove(view.legalMoves);
     }
-    var move = _findMoveByDistanceToTarget(view, targetPosition,
+    final move = _findMoveByDistanceToTarget(view, targetPosition,
         (double currentDistance, double bestDistance) {
       return currentDistance < bestDistance;
     });
@@ -213,8 +213,8 @@ class Runner extends Agent {
 
   @override
   Move pickMove(AgentView view) {
-    var initialPosition = view.getPositions(PieceType.king).first;
-    var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
+    final initialPosition = view.getPositions(PieceType.king).first;
+    final targetPosition = view.closestOpponent(initialPosition, PieceType.king);
     if (targetPosition == null) {
       return _findRandomMove(view.legalMoves);
     }
@@ -234,12 +234,12 @@ class Opportunist extends Agent {
 
   @override
   Move pickMove(AgentView view) {
-    var initialPosition = view.getPositions(PieceType.king).first;
-    var targetPosition = view.closestOpponent(initialPosition, PieceType.king);
+    final initialPosition = view.getPositions(PieceType.king).first;
+    final targetPosition = view.closestOpponent(initialPosition, PieceType.king);
     if (targetPosition == null) {
       return _findRandomMove(view.legalMoves);
     }
-    for (var move in view.legalMoves) {
+    for (final move in view.legalMoves) {
       if (move.finalPosition == targetPosition) {
         return move;
       }
