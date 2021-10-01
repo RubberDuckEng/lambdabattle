@@ -119,7 +119,7 @@ class BoardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var winner = gameState.winner;
+    final winner = gameState.winner;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -139,7 +139,7 @@ class BoardPainter extends CustomPainter {
   BoardPainter(this.gameState);
 
   void paintBackground(Canvas canvas, Size size, Size cell) {
-    var paint = Paint();
+    final paint = Paint();
     paint.style = PaintingStyle.fill;
     for (int i = 0; i < Board.kWidth; ++i) {
       for (int j = 0; j < Board.kHeight; ++j) {
@@ -162,7 +162,7 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    var cellSize = Size(size.width / Board.kWidth, size.height / Board.kHeight);
+    final cellSize = Size(size.width / Board.kWidth, size.height / Board.kHeight);
     paintBackground(canvas, size, cellSize);
     paintPieces(canvas, size, cellSize);
   }
@@ -181,14 +181,14 @@ class GameController {
   GameController.withAgents(this._agents);
 
   factory GameController.withRandomAgents(int numberOfPlayers) {
-    var rng = Random();
+    final rng = Random();
     return GameController.withAgents(List<Agent>.generate(numberOfPlayers,
         (index) => agents.all[rng.nextInt(agents.all.length)]()));
   }
 
   GameState getRandomInitialGameState() {
-    var board = Board.empty();
-    for (var player in _agents) {
+    Board board = Board.empty();
+    for (final player in _agents) {
       Position position;
       do {
         position = Position.random();
@@ -200,9 +200,9 @@ class GameController {
   }
 
   GameState takeTurn(GameState gameState) {
-    var activePlayer = gameState.activePlayer;
-    var view = AgentView(gameState, activePlayer);
-    var activeAgent = activePlayer as Agent;
+    final activePlayer = gameState.activePlayer;
+    final view = AgentView(gameState, activePlayer);
+    final activeAgent = activePlayer as Agent;
     return gameState.move(activeAgent.pickMove(view));
   }
 }
@@ -221,11 +221,11 @@ class LeaderBoard extends StatelessWidget {
           width: _kWidth, child: Text("Tap play to gather data."));
     }
     String asPercent(double value) {
-      var percent = (value / history.gameCount) * 100;
+      final percent = (value / history.gameCount) * 100;
       return "${percent.toStringAsFixed(1)}%";
     }
 
-    var entries = history.wins.entries.toList();
+    final entries = history.wins.entries.toList();
     entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
 
     return SizedBox(

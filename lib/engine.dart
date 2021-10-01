@@ -34,7 +34,7 @@ class Position {
   const Position(this.x, this.y);
 
   factory Position.random() {
-    var rng = Random();
+    final rng = Random();
     return Position(rng.nextInt(Board.kWidth), rng.nextInt(Board.kHeight));
   }
 
@@ -95,7 +95,7 @@ abstract class Player {
   const Player();
 
   void paint(Canvas canvas, Rect rect, PieceType type) {
-    var paint = Paint();
+    final Paint paint = Paint();
     paint.style = PaintingStyle.fill;
     paint.color = color;
     switch (type) {
@@ -159,8 +159,8 @@ class Board {
     _pieces.forEach(callback);
   }
 
-  Board placeAt(Position postion, Piece piece) {
-    return Board._(<Position, Piece>{postion: piece, ..._pieces});
+  Board placeAt(Position position, Piece piece) {
+    return Board._(<Position, Piece>{position: piece, ..._pieces});
   }
 
   Piece? getAt(Position position) {
@@ -168,7 +168,7 @@ class Board {
   }
 
   Board move(Player player, Move move) {
-    var piece = getAt(move.initialPosition);
+    final piece = getAt(move.initialPosition);
     if (piece == null) {
       throw IllegalMove('No piece at ${move.initialPosition}.');
     }
@@ -184,14 +184,14 @@ class Board {
       throw IllegalMove(
           'Pieces at ${move.initialPosition} and ${move.finalPosition} have the same owner.');
     }
-    var newPieces = <Position, Piece>{..._pieces};
+    final newPieces = <Position, Piece>{..._pieces};
     newPieces.remove(move.initialPosition);
     newPieces[move.finalPosition] = piece;
     return Board._(newPieces);
   }
 
   bool isLegalMove(Player player, Move move) {
-    var piece = getAt(move.initialPosition);
+    final piece = getAt(move.initialPosition);
     return piece != null &&
         piece.owner == player &&
         _canMovePieceTo(piece, move.finalPosition);
@@ -202,13 +202,13 @@ class Board {
   }
 
   Iterable<Move> getLegalMoves(Player player) sync* {
-    for (var position in _pieces.keys) {
-      var piece = getAt(position);
+    for (final position in _pieces.keys) {
+      final piece = getAt(position);
       if (piece == null || piece.owner != player) {
         continue;
       }
-      for (var delta in piece.deltas) {
-        var move = position.move(delta);
+      for (final delta in piece.deltas) {
+        final move = position.move(delta);
         if (_canMovePieceTo(piece, move.finalPosition)) {
           assert(isLegalMove(player, move));
           yield move;
@@ -218,7 +218,7 @@ class Board {
   }
 
   bool hasPieceOfType(Player player, PieceType type) {
-    for (var piece in _pieces.values) {
+    for (final piece in _pieces.values) {
       if (piece.owner == player && piece.type == type) {
         return true;
       }
@@ -246,11 +246,11 @@ class GameState {
   GameState.empty() : this(Board.empty(), const <Player>[], const <Player>[]);
 
   GameState move(Move move) {
-    var newBoard = board.move(activePlayer, move);
-    var newPlayers = <Player>[];
-    var newDeadPlayers = List<Player>.from(deadPlayers);
-    for (var i = 1; i < players.length; ++i) {
-      var player = players[i];
+    final newBoard = board.move(activePlayer, move);
+    final newPlayers = <Player>[];
+    final newDeadPlayers = List<Player>.from(deadPlayers);
+    for (int i = 1; i < players.length; ++i) {
+      final player = players[i];
       if (newBoard.isAlive(player)) {
         newPlayers.add(player);
       } else {
@@ -258,8 +258,8 @@ class GameState {
       }
     }
     newPlayers.add(activePlayer);
-    var newTurnsUntilDraw = turnsUntilDraw - 1;
-    var playerDied = players.length != newPlayers.length;
+    int newTurnsUntilDraw = turnsUntilDraw - 1;
+    bool playerDied = players.length != newPlayers.length;
     if (playerDied) {
       newTurnsUntilDraw = turnsUntilDrawDefault;
     }
@@ -313,7 +313,7 @@ class AgentView {
       if (piece.owner == _player || piece.type != type) {
         return;
       }
-      var currentDistance = position.deltaTo(currentPosition).magnitude;
+      double currentDistance = position.deltaTo(currentPosition).magnitude;
       if (currentDistance < bestDistance) {
         bestDistance = currentDistance;
         bestPosition = currentPosition;
@@ -335,7 +335,7 @@ class GameHistory {
   final Map<String, double> rating = <String, double>{};
 
   double expectedScore(double currentRating, double opponentRating) {
-    var exponent = (opponentRating - currentRating) / 400.0;
+    double exponent = (opponentRating - currentRating) / 400.0;
     return 1.0 / (1.0 + pow(10.0, exponent));
   }
 
@@ -354,37 +354,37 @@ class GameHistory {
   }
 
   void updateRating(Player winner, Player loser, double score) {
-    var winnerRating = currentRating(winner);
-    var loserRating = currentRating(loser);
-    var stake =
+    double winnerRating = currentRating(winner);
+    double loserRating = currentRating(loser);
+    double stake =
         pointsToTransfer(score, expectedScore(winnerRating, loserRating));
     adjustRating(winner, stake);
     adjustRating(loser, -stake);
   }
 
   void recordGame(GameState gameState) {
-    var pointsPerPlayer = 1.0 / gameState.players.length;
-    for (var player in gameState.players) {
-      var name = player.name;
+    double pointsPerPlayer = 1.0 / gameState.players.length;
+    for (final player in gameState.players) {
+      String name = player.name;
       wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
       gameCount += 1;
     }
     // http://www.tckerrigan.com/Misc/Multiplayer_Elo/
     // record dead players as losing against the next dead.
-    for (var i = 0; i < gameState.deadPlayers.length - 1; i++) {
-      var winner = gameState.deadPlayers[i + 1];
-      var loser = gameState.deadPlayers[i];
+    for (int i = 0; i < gameState.deadPlayers.length - 1; i++) {
+      final Player winner = gameState.deadPlayers[i + 1];
+      final Player loser = gameState.deadPlayers[i];
       updateRating(winner, loser, 1.0); // win
     }
-    var alivePlayers = List.from(gameState.players);
+    final List alivePlayers = List.from(gameState.players);
     alivePlayers.shuffle();
     // record last dead player as losing against random alive player?
     if (gameState.deadPlayers.isNotEmpty) {
       updateRating(alivePlayers.first, gameState.deadPlayers.last, 1.0); // win
     }
     // record alive players in a cycle of draws.
-    for (var i = 0; i < alivePlayers.length; i++) {
-      for (var j = i + 1; j < alivePlayers.length; j++) {
+    for (int i = 0; i < alivePlayers.length; i++) {
+      for (int j = i + 1; j < alivePlayers.length; j++) {
         updateRating(alivePlayers[i], alivePlayers[j], 0.5); // draw
       }
     }
