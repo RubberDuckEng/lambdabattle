@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+const int kMoveRange = 8;
+
 class Delta {
   final int dx;
   final int dy;
@@ -121,12 +123,16 @@ class Piece {
   Iterable<Delta> get deltas sync* {
     switch (type) {
       case PieceType.king:
-        for (int dx = -1; dx <= 1; ++dx) {
-          for (int dy = -1; dy <= 1; ++dy) {
-            if (dx == 0 && dy == 0) {
-              continue;
+        for (int x = -1; x <= 1; ++x) {
+          for (int y = -1; y <= 1; ++y) {
+            for (int d = 1; d <= kMoveRange; ++d) {
+              int dx = d * x;
+              int dy = d * y;
+              if (dx == 0 && dy == 0) {
+                continue;
+              }
+              yield Delta(dx, dy);
             }
-            yield Delta(dx, dy);
           }
         }
         break;
@@ -333,6 +339,7 @@ class GameHistory {
   int gameCount = 0;
 
   final Map<String, double> rating = <String, double>{};
+  final Map<String, Color> colors = <String, Color>{};
 
   double expectedScore(double currentRating, double opponentRating) {
     var exponent = (opponentRating - currentRating) / 400.0;
@@ -362,25 +369,18 @@ class GameHistory {
     adjustRating(loser, -stake);
   }
 
-  void recordGame(GameState gameState) {
-    var pointsPerPlayer = 1.0 / gameState.players.length;
-    for (var player in gameState.players) {
-      var name = player.name;
-      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
-      gameCount += 1;
-    }
+  void recordRatings(List<Player> alivePlayers, List<Player> deadPlayers) {
     // http://www.tckerrigan.com/Misc/Multiplayer_Elo/
     // record dead players as losing against the next dead.
-    for (var i = 0; i < gameState.deadPlayers.length - 1; i++) {
-      var winner = gameState.deadPlayers[i + 1];
-      var loser = gameState.deadPlayers[i];
+    for (var i = 0; i < deadPlayers.length - 1; i++) {
+      var winner = deadPlayers[i + 1];
+      var loser = deadPlayers[i];
       updateRating(winner, loser, 1.0); // win
     }
-    var alivePlayers = List.from(gameState.players);
     alivePlayers.shuffle();
     // record last dead player as losing against random alive player?
-    if (gameState.deadPlayers.isNotEmpty) {
-      updateRating(alivePlayers.first, gameState.deadPlayers.last, 1.0); // win
+    if (deadPlayers.isNotEmpty) {
+      updateRating(alivePlayers.first, deadPlayers.last, 1.0); // win
     }
     // record alive players in a cycle of draws.
     for (var i = 0; i < alivePlayers.length; i++) {
@@ -388,6 +388,28 @@ class GameHistory {
         updateRating(alivePlayers[i], alivePlayers[j], 0.5); // draw
       }
     }
+  }
+
+  void recordGame(GameState gameState) {
+    var pointsPerPlayer = 1.0 / gameState.players.length;
+    for (var player in gameState.players) {
+      var name = player.name;
+      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
+      colors[name] = player.color;
+      gameCount += 1;
+    }
+
+    var haveSeen = <Type, bool>{};
+
+    bool checkPlayer(p) {
+      var didSeeBefore = haveSeen[p.runtimeType] ?? false;
+      haveSeen[p.runtimeType] = true;
+      return !didSeeBefore;
+    }
+
+    var alivePlayers = gameState.players.where(checkPlayer).toList();
+    var deadPlayers = gameState.deadPlayers.where(checkPlayer).toList();
+    recordRatings(alivePlayers, deadPlayers);
   }
 }
 

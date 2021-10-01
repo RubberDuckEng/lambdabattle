@@ -6,6 +6,9 @@ import 'dart:math';
 import 'engine.dart';
 import 'package:flutter/material.dart';
 
+const int kNumberOfPlayers = 5;
+const Duration kGameTickDuration = const Duration(milliseconds: 1);
+
 void main() {
   runApp(const LambdaBattle());
 }
@@ -61,10 +64,10 @@ class _BattlePageState extends State<BattlePage> {
 
   void _startBattle() {
     setState(() {
-      gameController = GameController.withRandomAgents(5);
+      gameController = GameController.withRandomAgents(kNumberOfPlayers);
       gameState = gameController.getRandomInitialGameState();
     });
-    timer = Timer.periodic(const Duration(milliseconds: 5), _handleTimer);
+    timer = Timer.periodic(kGameTickDuration, _handleTimer);
   }
 
   void _stopBattle() {
@@ -238,7 +241,7 @@ class LeaderBoard extends StatelessWidget {
               left: BorderSide(color: Colors.black26),
               verticalInside: BorderSide(color: Colors.black26)),
           children: <TableRow>[
-                const TableRow(
+                TableRow(
                   decoration: const BoxDecoration(
                       color: Colors.black12,
                       border:
@@ -250,10 +253,10 @@ class LeaderBoard extends StatelessWidget {
                         child: const Text("Player"),
                       ),
                     ),
-                    const TableCell(
-                      child: const Padding(
+                    TableCell(
+                      child: Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: const Text("Percent"),
+                        child: Text("Percent (n=${history.gameCount})"),
                       ),
                     ),
                     const TableCell(
@@ -272,7 +275,10 @@ class LeaderBoard extends StatelessWidget {
                         TableCell(
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
-                            child: Text(e.key),
+                            child: Text(
+                              e.key,
+                              style: TextStyle(color: history.colors[e.key]),
+                            ),
                           ),
                         ),
                         TableCell(
