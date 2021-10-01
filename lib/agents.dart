@@ -10,6 +10,7 @@ List<AgentFactory> all = <AgentFactory>[
   () => RandomMover(),
   () => Fixate(),
   () => Seeker(),
+  () => CautiousSeeker(),
   () => Runner(),
   () => Opportunist(),
 ];
@@ -149,6 +150,57 @@ class Seeker extends Agent {
     });
     target = move.finalPosition.deltaTo(targetPosition);
     return move;
+  }
+}
+
+/// Tries to get as close to other pieces, but not too close.
+class CautiousSeeker extends Agent {
+  @override
+  String get name => "CautiousSeeker";
+  @override
+  Color get color => Colors.orange;
+
+  int _distanceToNearestPiece(Move move, List<Position> pieces) {
+    assert(pieces.isNotEmpty);
+    return pieces
+        .map((e) => e.deltaTo(move.finalPosition).walkingDistance)
+        .fold(
+            null,
+            (int? previousValue, element) =>
+                (previousValue == null || element < previousValue)
+                    ? element
+                    : previousValue)!;
+  }
+
+  @override
+  Move pickMove(AgentView view) {
+    final otherKings = view.enemyPositions(PieceType.king);
+    // If at the end of the move we would be next to another piece (distance == 1)
+    // it is not safe! We could be eaten in the next round.
+    // We still allow distances of 0, in which case we eat the enemy piece.
+    final safeMoves = view.legalMoves
+        .where(
+          (move) => !otherKings
+              .map((e) => e.deltaTo(move.finalPosition).walkingDistance)
+              .contains(1),
+        )
+        .toList();
+    if (safeMoves.isEmpty) {
+      // If there are no safe moves, choose a random move.
+      // There may be a better heuristic to find the "safest" move in this case.
+      return _findRandomMove(view.legalMoves);
+    }
+    // Find the move that brings us closest to an opponent.
+    Move? bestMove;
+    int? bestDistance;
+    for (final move in safeMoves) {
+      final distance = _distanceToNearestPiece(move, otherKings);
+      if (bestDistance == null || distance < bestDistance) {
+        bestDistance = distance;
+        bestMove = move;
+      }
+    }
+    return bestMove!;
   }
 }
 
