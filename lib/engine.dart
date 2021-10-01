@@ -1,5 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+const int kMoveRange = 8;
 
 class Delta {
   final int dx;
@@ -121,12 +124,16 @@ class Piece {
   Iterable<Delta> get deltas sync* {
     switch (type) {
       case PieceType.king:
-        for (int dx = -1; dx <= 1; ++dx) {
-          for (int dy = -1; dy <= 1; ++dy) {
-            if (dx == 0 && dy == 0) {
-              continue;
+        for (int x = -1; x <= 1; ++x) {
+          for (int y = -1; y <= 1; ++y) {
+            for (int d = 1; d <= kMoveRange; ++d) {
+              int dx = d * x;
+              int dy = d * y;
+              if (dx == 0 && dy == 0) {
+                continue;
+              }
+              yield Delta(dx, dy);
             }
-            yield Delta(dx, dy);
           }
         }
         break;
@@ -259,7 +266,7 @@ class GameState {
     }
     newPlayers.add(activePlayer);
     int newTurnsUntilDraw = turnsUntilDraw - 1;
-    bool playerDied = players.length != newPlayers.length;
+    final bool playerDied = players.length != newPlayers.length;
     if (playerDied) {
       newTurnsUntilDraw = turnsUntilDrawDefault;
     }
@@ -296,13 +303,13 @@ class AgentView {
 
   List<Position> getPositions(PieceType type) {
     return _getPositionsIf(
-      (piece) => piece.owner == _player && piece.type == type,
+          (piece) => piece.owner == _player && piece.type == type,
     );
   }
 
   List<Position> enemyPositions(PieceType type) {
     return _getPositionsIf(
-      (piece) => piece.owner != _player && piece.type == type,
+          (piece) => piece.owner != _player && piece.type == type,
     );
   }
 
@@ -313,7 +320,7 @@ class AgentView {
       if (piece.owner == _player || piece.type != type) {
         return;
       }
-      double currentDistance = position.deltaTo(currentPosition).magnitude;
+      final double currentDistance = position.deltaTo(currentPosition).magnitude;
       if (currentDistance < bestDistance) {
         bestDistance = currentDistance;
         bestPosition = currentPosition;
@@ -333,9 +340,10 @@ class GameHistory {
   int gameCount = 0;
 
   final Map<String, double> rating = <String, double>{};
+  final Map<String, Color> colors = <String, Color>{};
 
   double expectedScore(double currentRating, double opponentRating) {
-    double exponent = (opponentRating - currentRating) / 400.0;
+    final double exponent = (opponentRating - currentRating) / 400.0;
     return 1.0 / (1.0 + pow(10.0, exponent));
   }
 
@@ -354,33 +362,26 @@ class GameHistory {
   }
 
   void updateRating(Player winner, Player loser, double score) {
-    double winnerRating = currentRating(winner);
-    double loserRating = currentRating(loser);
-    double stake =
-        pointsToTransfer(score, expectedScore(winnerRating, loserRating));
+    final winnerRating = currentRating(winner);
+    final loserRating = currentRating(loser);
+    final stake =
+    pointsToTransfer(score, expectedScore(winnerRating, loserRating));
     adjustRating(winner, stake);
     adjustRating(loser, -stake);
   }
 
-  void recordGame(GameState gameState) {
-    double pointsPerPlayer = 1.0 / gameState.players.length;
-    for (final player in gameState.players) {
-      String name = player.name;
-      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
-      gameCount += 1;
-    }
+  void recordRatings(List<Player> alivePlayers, List<Player> deadPlayers) {
     // http://www.tckerrigan.com/Misc/Multiplayer_Elo/
     // record dead players as losing against the next dead.
-    for (int i = 0; i < gameState.deadPlayers.length - 1; i++) {
-      final Player winner = gameState.deadPlayers[i + 1];
-      final Player loser = gameState.deadPlayers[i];
+    for (int i = 0; i < deadPlayers.length - 1; i++) {
+      final winner = deadPlayers[i + 1];
+      final loser = deadPlayers[i];
       updateRating(winner, loser, 1.0); // win
     }
-    final List alivePlayers = List.from(gameState.players);
     alivePlayers.shuffle();
     // record last dead player as losing against random alive player?
-    if (gameState.deadPlayers.isNotEmpty) {
-      updateRating(alivePlayers.first, gameState.deadPlayers.last, 1.0); // win
+    if (deadPlayers.isNotEmpty) {
+      updateRating(alivePlayers.first, deadPlayers.last, 1.0); // win
     }
     // record alive players in a cycle of draws.
     for (int i = 0; i < alivePlayers.length; i++) {
@@ -388,6 +389,28 @@ class GameHistory {
         updateRating(alivePlayers[i], alivePlayers[j], 0.5); // draw
       }
     }
+  }
+
+  void recordGame(GameState gameState) {
+    final pointsPerPlayer = 1.0 / gameState.players.length;
+    for (final player in gameState.players) {
+      final name = player.name;
+      wins[name] = (wins[name] ?? 0.0) + pointsPerPlayer;
+      colors[name] = player.color;
+      gameCount += 1;
+    }
+
+    final haveSeen = <Type, bool>{};
+
+    bool checkPlayer(p) {
+      final didSeeBefore = haveSeen[p.runtimeType] ?? false;
+      haveSeen[p.runtimeType] = true;
+      return !didSeeBefore;
+    }
+
+    final alivePlayers = gameState.players.where(checkPlayer).toList();
+    final deadPlayers = gameState.deadPlayers.where(checkPlayer).toList();
+    recordRatings(alivePlayers, deadPlayers);
   }
 }
 
