@@ -303,13 +303,13 @@ class AgentView {
 
   List<Position> getPositions(PieceType type) {
     return _getPositionsIf(
-          (piece) => piece.owner == _player && piece.type == type,
+      (piece) => piece.owner == _player && piece.type == type,
     );
   }
 
   List<Position> enemyPositions(PieceType type) {
     return _getPositionsIf(
-          (piece) => piece.owner != _player && piece.type == type,
+      (piece) => piece.owner != _player && piece.type == type,
     );
   }
 
@@ -320,7 +320,8 @@ class AgentView {
       if (piece.owner == _player || piece.type != type) {
         return;
       }
-      final double currentDistance = position.deltaTo(currentPosition).magnitude;
+      final double currentDistance =
+          position.deltaTo(currentPosition).magnitude;
       if (currentDistance < bestDistance) {
         bestDistance = currentDistance;
         bestPosition = currentPosition;
@@ -365,7 +366,7 @@ class GameHistory {
     final winnerRating = currentRating(winner);
     final loserRating = currentRating(loser);
     final stake =
-    pointsToTransfer(score, expectedScore(winnerRating, loserRating));
+        pointsToTransfer(score, expectedScore(winnerRating, loserRating));
     adjustRating(winner, stake);
     adjustRating(loser, -stake);
   }
