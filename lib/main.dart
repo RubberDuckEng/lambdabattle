@@ -7,7 +7,7 @@ import 'engine.dart';
 import 'package:flutter/material.dart';
 
 const int kNumberOfPlayers = 5;
-const Duration kGameTickDuration = const Duration(milliseconds: 1);
+const Duration kGameTickDuration = const Duration(milliseconds: 60);
 
 void main() {
   runApp(const LambdaBattle());
@@ -16,7 +16,6 @@ void main() {
 class LambdaBattle extends StatelessWidget {
   const LambdaBattle({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,23 +23,24 @@ class LambdaBattle extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const BattlePage(title: 'Lambda Battle!'),
+      home: const BattleGround(title: 'Lambda Battle!'),
     );
   }
 }
 
-class BattlePage extends StatefulWidget {
-  const BattlePage({Key? key, required this.title}) : super(key: key);
+class BattleGround extends StatefulWidget {
+  const BattleGround({Key? key, required this.title}) : super(key: key);
 
   final String title;
 
   @override
-  State<BattlePage> createState() => _BattlePageState();
+  State<BattleGround> createState() => _BattleGroundState();
 }
 
-class _BattlePageState extends State<BattlePage> {
+class _BattleGroundState extends State<BattleGround> {
   GameState gameState = GameState.empty();
   GameController gameController = GameController();
+
   final history = GameHistory();
 
   Timer? timer;
@@ -129,17 +129,18 @@ class BoardView extends StatelessWidget {
         CustomPaint(painter: BoardPainter(gameState)),
         if (winner != null)
           Container(
-              color: Colors.white.withOpacity(0.6),
-              child: Center(child: Text('A winner is ${winner.name}'))),
+            color: Colors.white.withOpacity(0.6),
+            child: Center(child: Text('A winner is ${winner.name}')),
+          ),
       ],
     );
   }
 }
 
 class BoardPainter extends CustomPainter {
-  final GameState gameState;
+  const BoardPainter(this.gameState);
 
-  BoardPainter(this.gameState);
+  final GameState gameState;
 
   void paintBackground(Canvas canvas, Size size, Size cell) {
     final paint = Paint();
@@ -165,7 +166,10 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cellSize = Size(size.width / Board.kWidth, size.height / Board.kHeight);
+    final _cellWidth = size.width / Board.kWidth;
+    final _cellHeight = size.height / Board.kHeight;
+
+    final cellSize = Size(_cellWidth, _cellHeight);
     paintBackground(canvas, size, cellSize);
     paintPieces(canvas, size, cellSize);
   }
@@ -177,16 +181,19 @@ class BoardPainter extends CustomPainter {
 }
 
 class GameController {
-  final List<Agent> _agents;
-
   GameController() : _agents = <Agent>[];
 
   GameController.withAgents(this._agents);
 
+  final List<Agent> _agents;
+
   factory GameController.withRandomAgents(int numberOfPlayers) {
-    final rng = Random();
-    return GameController.withAgents(List<Agent>.generate(numberOfPlayers,
-        (index) => agents.all[rng.nextInt(agents.all.length)]()));
+    final rnd = Random();
+    return GameController.withAgents(
+      List<Agent>.generate(numberOfPlayers, (index) {
+        return agents.all[rnd.nextInt(agents.all.length)]();
+      }),
+    );
   }
 
   GameState getRandomInitialGameState() {
@@ -211,9 +218,9 @@ class GameController {
 }
 
 class LeaderBoard extends StatelessWidget {
-  final GameHistory history;
-
   const LeaderBoard({Key? key, required this.history}) : super(key: key);
+
+  final GameHistory history;
 
   static const double _kWidth = 230;
 
@@ -221,7 +228,9 @@ class LeaderBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (history.wins.isEmpty) {
       return const SizedBox(
-          width: _kWidth, child: Text("Tap play to gather data."));
+        width: _kWidth,
+        child: Text("Tap play to gather data."),
+      );
     }
     String asPercent(double value) {
       final percent = (value / history.gameCount) * 100;
