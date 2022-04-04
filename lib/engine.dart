@@ -338,10 +338,13 @@ const double initialRating = 500.0;
 
 class GameHistory {
   final Map<String, double> wins = <String, double>{};
-  int gameCount = 0;
-
   final Map<String, double> rating = <String, double>{};
   final Map<String, Color> colors = <String, Color>{};
+  final Map<String, double> lastGameRating = <String, double>{};
+
+  Player? lastWinner;
+  int gameCount = 0;
+  List<String> deadPlayers = [];
 
   double expectedScore(double currentRating, double opponentRating) {
     final double exponent = (opponentRating - currentRating) / 400.0;
@@ -359,6 +362,7 @@ class GameHistory {
   double currentRating(Player player) => currentRatingForName(player.name);
 
   void adjustRating(Player player, double delta) {
+    lastGameRating[player.name] = currentRating(player);
     rating[player.name] = currentRating(player) + delta;
   }
 
@@ -411,8 +415,45 @@ class GameHistory {
 
     final alivePlayers = gameState.players.where(checkPlayer).toList();
     final deadPlayers = gameState.deadPlayers.where(checkPlayer).toList();
+    recordDeadPlayer(deadPlayers);
+    recordWinner(gameState.winner);
     recordRatings(alivePlayers, deadPlayers);
   }
+
+  void recordWinner(Player? player) {
+    lastWinner = player;
+  }
+
+  bool isWinner(String name) {
+    return lastWinner?.name == name;
+  }
+
+  void recordDeadPlayer(List<Player> _deadPlayers) {
+    deadPlayers = _deadPlayers.map((p) => p.name).toList();
+  }
+
+  bool playerIsDead(String name) {
+    return deadPlayers.contains(name);
+  }
+
+  RatingState ratingState(String name) {
+    if (gameCount == 0) return RatingState.none;
+    final lastRating = lastGameRating[name];
+    final currentRating = rating[name];
+
+    if (currentRating != null && lastRating != null) {
+      if (currentRating == lastRating) return RatingState.none;
+      if (currentRating < lastRating) return RatingState.dropped;
+      if (currentRating > lastRating) return RatingState.increased;
+    }
+    return RatingState.none;
+  }
+}
+
+enum RatingState {
+  none,
+  dropped,
+  increased,
 }
 
 abstract class Agent extends Player {

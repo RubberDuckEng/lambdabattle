@@ -16,7 +16,6 @@ void main() {
 class LambdaBattle extends StatelessWidget {
   const LambdaBattle({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,23 +23,24 @@ class LambdaBattle extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const BattlePage(title: 'Lambda Battle!'),
+      home: const BattleGround(title: 'Lambda Battle!'),
     );
   }
 }
 
-class BattlePage extends StatefulWidget {
-  const BattlePage({Key? key, required this.title}) : super(key: key);
+class BattleGround extends StatefulWidget {
+  const BattleGround({Key? key, required this.title}) : super(key: key);
 
   final String title;
 
   @override
-  State<BattlePage> createState() => _BattlePageState();
+  State<BattleGround> createState() => _BattleGroundState();
 }
 
-class _BattlePageState extends State<BattlePage> {
+class _BattleGroundState extends State<BattleGround> {
   GameState gameState = GameState.empty();
   GameController gameController = GameController();
+
   final history = GameHistory();
 
   Timer? timer;
@@ -53,9 +53,11 @@ class _BattlePageState extends State<BattlePage> {
 
   void _handleTimer(Timer _) {
     nextTurn();
+    history.recordDeadPlayer(gameState.deadPlayers);
 
     if (gameState.isDone) {
       history.recordGame(gameState);
+
       timer?.cancel();
       timer = null;
       _startBattle();
@@ -129,17 +131,18 @@ class BoardView extends StatelessWidget {
         CustomPaint(painter: BoardPainter(gameState)),
         if (winner != null)
           Container(
-              color: Colors.white.withOpacity(0.6),
-              child: Center(child: Text('A winner is ${winner.name}'))),
+            color: Colors.white.withOpacity(0.6),
+            child: Center(child: Text('A winner is ${winner.name}')),
+          ),
       ],
     );
   }
 }
 
 class BoardPainter extends CustomPainter {
-  final GameState gameState;
+  const BoardPainter(this.gameState);
 
-  BoardPainter(this.gameState);
+  final GameState gameState;
 
   void paintBackground(Canvas canvas, Size size, Size cell) {
     final paint = Paint();
@@ -165,7 +168,10 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cellSize = Size(size.width / Board.kWidth, size.height / Board.kHeight);
+    final _cellWidth = size.width / Board.kWidth;
+    final _cellHeight = size.height / Board.kHeight;
+
+    final cellSize = Size(_cellWidth, _cellHeight);
     paintBackground(canvas, size, cellSize);
     paintPieces(canvas, size, cellSize);
   }
@@ -177,16 +183,19 @@ class BoardPainter extends CustomPainter {
 }
 
 class GameController {
-  final List<Agent> _agents;
-
   GameController() : _agents = <Agent>[];
 
   GameController.withAgents(this._agents);
 
+  final List<Agent> _agents;
+
   factory GameController.withRandomAgents(int numberOfPlayers) {
-    final rng = Random();
-    return GameController.withAgents(List<Agent>.generate(numberOfPlayers,
-        (index) => agents.all[rng.nextInt(agents.all.length)]()));
+    final rnd = Random();
+    return GameController.withAgents(
+      List<Agent>.generate(numberOfPlayers, (index) {
+        return agents.all[rnd.nextInt(agents.all.length)]();
+      }),
+    );
   }
 
   GameState getRandomInitialGameState() {
@@ -211,17 +220,19 @@ class GameController {
 }
 
 class LeaderBoard extends StatelessWidget {
-  final GameHistory history;
-
   const LeaderBoard({Key? key, required this.history}) : super(key: key);
 
-  static const double _kWidth = 230;
+  final GameHistory history;
+
+  static const double _kWidth = 250;
 
   @override
   Widget build(BuildContext context) {
     if (history.wins.isEmpty) {
       return const SizedBox(
-          width: _kWidth, child: Text("Tap play to gather data."));
+        width: _kWidth,
+        child: Text("Tap play to gather data."),
+      );
     }
     String asPercent(double value) {
       final percent = (value / history.gameCount) * 100;
@@ -231,74 +242,131 @@ class LeaderBoard extends StatelessWidget {
     final entries = history.wins.entries.toList();
     entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
 
+    const _borderSide = BorderSide(color: Colors.black26);
+
     return SizedBox(
-        width: _kWidth,
-        child: Table(
-          border: const TableBorder(
-              top: BorderSide(color: Colors.black26),
-              bottom: BorderSide(color: Colors.black26),
-              right: BorderSide(color: Colors.black26),
-              left: BorderSide(color: Colors.black26),
-              verticalInside: BorderSide(color: Colors.black26)),
-          children: <TableRow>[
-                TableRow(
-                  decoration: const BoxDecoration(
-                      color: Colors.black12,
-                      border:
-                          Border(bottom: BorderSide(color: Colors.black26))),
+      width: _kWidth,
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(130),
+          1: FixedColumnWidth(65),
+          2: FixedColumnWidth(95),
+        },
+        border: const TableBorder(
+          top: _borderSide,
+          bottom: _borderSide,
+          right: _borderSide,
+          left: _borderSide,
+          verticalInside: _borderSide,
+        ),
+        children: _tableHeaderRow(history.gameCount) +
+            entries.map(
+              (e) {
+                return TableRow(
                   children: <Widget>[
-                    const TableCell(
-                      child: const Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: const Text("Player"),
-                      ),
+                    TableCellText(
+                      e.key,
+                      color: history.colors[e.key],
+                      isDead: history.playerIsDead(e.key),
+                      isWinner: history.isWinner(e.key),
                     ),
-                    TableCell(
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Text("Percent (n=${history.gameCount})"),
-                      ),
-                    ),
-                    const TableCell(
-                      child: const Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: const Text("ELO"),
-                      ),
+                    TableCellText(asPercent(e.value)),
+                    TableCellText(
+                      history.currentRatingForName(e.key).toStringAsFixed(0),
+                      ratingState: history.ratingState(e.key),
                     ),
                   ],
-                ),
-              ] +
-              entries
-                  .map(
-                    (e) => TableRow(
-                      children: <Widget>[
-                        TableCell(
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(
-                              e.key,
-                              style: TextStyle(color: history.colors[e.key]),
-                            ),
-                          ),
-                        ),
-                        TableCell(
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(asPercent(e.value)),
-                          ),
-                        ),
-                        TableCell(
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(history
-                                .currentRatingForName(e.key)
-                                .toStringAsFixed(0)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  .toList(),
-        ));
+                );
+              },
+            ).toList(),
+      ),
+    );
   }
+}
+
+class TableCellText extends StatelessWidget {
+  const TableCellText(
+    this.label, {
+    Key? key,
+    this.color,
+    this.isDead,
+    this.isWinner,
+    this.ratingState,
+  }) : super(key: key);
+
+  final String label;
+  final Color? color;
+  final bool? isDead;
+  final bool? isWinner;
+  final RatingState? ratingState;
+
+  String get _cellLabel {
+    if (isDead != null && isDead!) {
+      return '$label ☠️';
+    }
+    if (isWinner != null && isWinner!) {
+      return '$label 👑';
+    }
+
+    if (ratingState != null) {
+      return _labelWithRating;
+    }
+
+    return label;
+  }
+
+  String get _labelWithRating {
+    switch (ratingState!) {
+      case RatingState.none:
+        return label;
+      case RatingState.dropped:
+        return '$label 🔻';
+      case RatingState.increased:
+        return '$label 🔼';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Text(
+          _cellLabel,
+          style: TextStyle(color: color),
+        ),
+      ),
+    );
+  }
+}
+
+List<TableRow> _tableHeaderRow(int gameCount) {
+  return <TableRow>[
+    TableRow(
+      decoration: const BoxDecoration(
+        color: Colors.black12,
+        border: Border(bottom: BorderSide(color: Colors.black26)),
+      ),
+      children: <Widget>[
+        const TableCell(
+          child: const Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: const Text("Player"),
+          ),
+        ),
+        TableCell(
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Text("Percent (n=$gameCount)"),
+          ),
+        ),
+        const TableCell(
+          child: const Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: const Text("ELO"),
+          ),
+        ),
+      ],
+    ),
+  ];
 }
