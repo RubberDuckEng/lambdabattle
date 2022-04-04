@@ -53,9 +53,11 @@ class _BattleGroundState extends State<BattleGround> {
 
   void _handleTimer(Timer _) {
     nextTurn();
+    history.recordDeadPlayer(gameState.deadPlayers);
 
     if (gameState.isDone) {
       history.recordGame(gameState);
+
       timer?.cancel();
       timer = null;
       _startBattle();
@@ -222,7 +224,7 @@ class LeaderBoard extends StatelessWidget {
 
   final GameHistory history;
 
-  static const double _kWidth = 230;
+  static const double _kWidth = 250;
 
   @override
   Widget build(BuildContext context) {
@@ -241,73 +243,84 @@ class LeaderBoard extends StatelessWidget {
     entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
 
     return SizedBox(
-        width: _kWidth,
-        child: Table(
-          border: const TableBorder(
-              top: BorderSide(color: Colors.black26),
-              bottom: BorderSide(color: Colors.black26),
-              right: BorderSide(color: Colors.black26),
-              left: BorderSide(color: Colors.black26),
-              verticalInside: BorderSide(color: Colors.black26)),
-          children: <TableRow>[
-                TableRow(
-                  decoration: const BoxDecoration(
-                      color: Colors.black12,
-                      border:
-                          Border(bottom: BorderSide(color: Colors.black26))),
+      width: _kWidth,
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(130),
+          1: FixedColumnWidth(65),
+          2: FixedColumnWidth(95),
+        },
+        border: const TableBorder(
+          top: BorderSide(color: Colors.black26),
+          bottom: BorderSide(color: Colors.black26),
+          right: BorderSide(color: Colors.black26),
+          left: BorderSide(color: Colors.black26),
+          verticalInside: BorderSide(color: Colors.black26),
+        ),
+        children: _tableHeaderRow(history.gameCount) +
+            entries.map(
+              (e) {
+                return TableRow(
                   children: <Widget>[
-                    const TableCell(
-                      child: const Padding(
+                    TableCell(
+                      child: Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: const Text("Player"),
+                        child: Text(
+                          '${e.key} ${history.playerIsDead(e.key) ? '☠️' : ''} ${history.isWinner(e.key) ? '👑':''}',
+                          style: TextStyle(color: history.colors[e.key]),
+                        ),
                       ),
                     ),
                     TableCell(
                       child: Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: Text("Percent (n=${history.gameCount})"),
+                        child: Text(asPercent(e.value)),
                       ),
                     ),
-                    const TableCell(
-                      child: const Padding(
+                    TableCell(
+                      child: Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: const Text("ELO"),
+                        child: Text(
+                          '${history.currentRatingForName(e.key).toStringAsFixed(0)} ${history.ratingDropped(e.key) ? '🔻' : '🔼'}',
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ] +
-              entries
-                  .map(
-                    (e) => TableRow(
-                      children: <Widget>[
-                        TableCell(
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(
-                              e.key,
-                              style: TextStyle(color: history.colors[e.key]),
-                            ),
-                          ),
-                        ),
-                        TableCell(
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(asPercent(e.value)),
-                          ),
-                        ),
-                        TableCell(
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(history
-                                .currentRatingForName(e.key)
-                                .toStringAsFixed(0)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  .toList(),
-        ));
+                );
+              },
+            ).toList(),
+      ),
+    );
   }
+}
+
+List<TableRow> _tableHeaderRow(int gameCount) {
+  return <TableRow>[
+    TableRow(
+      decoration: const BoxDecoration(
+        color: Colors.black12,
+        border: Border(bottom: BorderSide(color: Colors.black26)),
+      ),
+      children: <Widget>[
+        const TableCell(
+          child: const Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: const Text("Player"),
+          ),
+        ),
+        TableCell(
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Text("Percent (n=$gameCount)"),
+          ),
+        ),
+        const TableCell(
+          child: const Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: const Text("ELO"),
+          ),
+        ),
+      ],
+    ),
+  ];
 }

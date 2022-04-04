@@ -303,13 +303,13 @@ class AgentView {
 
   List<Position> getPositions(PieceType type) {
     return _getPositionsIf(
-          (piece) => piece.owner == _player && piece.type == type,
+      (piece) => piece.owner == _player && piece.type == type,
     );
   }
 
   List<Position> enemyPositions(PieceType type) {
     return _getPositionsIf(
-          (piece) => piece.owner != _player && piece.type == type,
+      (piece) => piece.owner != _player && piece.type == type,
     );
   }
 
@@ -320,7 +320,8 @@ class AgentView {
       if (piece.owner == _player || piece.type != type) {
         return;
       }
-      final double currentDistance = position.deltaTo(currentPosition).magnitude;
+      final double currentDistance =
+          position.deltaTo(currentPosition).magnitude;
       if (currentDistance < bestDistance) {
         bestDistance = currentDistance;
         bestPosition = currentPosition;
@@ -337,10 +338,13 @@ const double initialRating = 500.0;
 
 class GameHistory {
   final Map<String, double> wins = <String, double>{};
-  int gameCount = 0;
-
   final Map<String, double> rating = <String, double>{};
   final Map<String, Color> colors = <String, Color>{};
+  final Map<String, double> lastGameRating = <String, double>{};
+
+  Player? lastWinner;
+  int gameCount = 0;
+  List<String> deadPlayers = [];
 
   double expectedScore(double currentRating, double opponentRating) {
     final double exponent = (opponentRating - currentRating) / 400.0;
@@ -358,6 +362,7 @@ class GameHistory {
   double currentRating(Player player) => currentRatingForName(player.name);
 
   void adjustRating(Player player, double delta) {
+    lastGameRating[player.name] = currentRating(player);
     rating[player.name] = currentRating(player) + delta;
   }
 
@@ -365,7 +370,7 @@ class GameHistory {
     final winnerRating = currentRating(winner);
     final loserRating = currentRating(loser);
     final stake =
-    pointsToTransfer(score, expectedScore(winnerRating, loserRating));
+        pointsToTransfer(score, expectedScore(winnerRating, loserRating));
     adjustRating(winner, stake);
     adjustRating(loser, -stake);
   }
@@ -410,7 +415,35 @@ class GameHistory {
 
     final alivePlayers = gameState.players.where(checkPlayer).toList();
     final deadPlayers = gameState.deadPlayers.where(checkPlayer).toList();
+    recordDeadPlayer(deadPlayers);
+    recordWinner(gameState.winner);
     recordRatings(alivePlayers, deadPlayers);
+  }
+
+  void recordWinner(Player? player) {
+    lastWinner = player;
+  }
+
+  bool isWinner(String name) {
+    return lastWinner?.name == name;
+  }
+
+  void recordDeadPlayer(List<Player> _deadPlayers) {
+    deadPlayers = _deadPlayers.map((p) => p.name).toList();
+  }
+
+  bool playerIsDead(String name) {
+    return deadPlayers.contains(name);
+  }
+
+  bool ratingDropped(String name) {
+    if (gameCount == 0) return false;
+    final lastRating = lastGameRating[name];
+    final currentRating = rating[name];
+    if (currentRating != null && lastRating != null) {
+      return currentRating < lastRating;
+    }
+    return false;
   }
 }
 
