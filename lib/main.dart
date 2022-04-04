@@ -7,7 +7,7 @@ import 'engine.dart';
 import 'package:flutter/material.dart';
 
 const int kNumberOfPlayers = 5;
-const Duration kGameTickDuration = const Duration(milliseconds: 60);
+const Duration kGameTickDuration = const Duration(milliseconds: 1);
 
 void main() {
   runApp(const LambdaBattle());
@@ -242,6 +242,8 @@ class LeaderBoard extends StatelessWidget {
     final entries = history.wins.entries.toList();
     entries.sort((lhs, rhs) => rhs.value.compareTo(lhs.value));
 
+    const _borderSide = BorderSide(color: Colors.black26);
+
     return SizedBox(
       width: _kWidth,
       child: Table(
@@ -251,44 +253,88 @@ class LeaderBoard extends StatelessWidget {
           2: FixedColumnWidth(95),
         },
         border: const TableBorder(
-          top: BorderSide(color: Colors.black26),
-          bottom: BorderSide(color: Colors.black26),
-          right: BorderSide(color: Colors.black26),
-          left: BorderSide(color: Colors.black26),
-          verticalInside: BorderSide(color: Colors.black26),
+          top: _borderSide,
+          bottom: _borderSide,
+          right: _borderSide,
+          left: _borderSide,
+          verticalInside: _borderSide,
         ),
         children: _tableHeaderRow(history.gameCount) +
             entries.map(
               (e) {
                 return TableRow(
                   children: <Widget>[
-                    TableCell(
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Text(
-                          '${e.key} ${history.playerIsDead(e.key) ? '☠️' : ''} ${history.isWinner(e.key) ? '👑':''}',
-                          style: TextStyle(color: history.colors[e.key]),
-                        ),
-                      ),
+                    TableCellText(
+                      e.key,
+                      color: history.colors[e.key],
+                      isDead: history.playerIsDead(e.key),
+                      isWinner: history.isWinner(e.key),
                     ),
-                    TableCell(
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Text(asPercent(e.value)),
-                      ),
-                    ),
-                    TableCell(
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Text(
-                          '${history.currentRatingForName(e.key).toStringAsFixed(0)} ${history.ratingDropped(e.key) ? '🔻' : '🔼'}',
-                        ),
-                      ),
+                    TableCellText(asPercent(e.value)),
+                    TableCellText(
+                      history.currentRatingForName(e.key).toStringAsFixed(0),
+                      ratingState: history.ratingState(e.key),
                     ),
                   ],
                 );
               },
             ).toList(),
+      ),
+    );
+  }
+}
+
+class TableCellText extends StatelessWidget {
+  const TableCellText(
+    this.label, {
+    Key? key,
+    this.color,
+    this.isDead,
+    this.isWinner,
+    this.ratingState,
+  }) : super(key: key);
+
+  final String label;
+  final Color? color;
+  final bool? isDead;
+  final bool? isWinner;
+  final RatingState? ratingState;
+
+  String get _cellLabel {
+    if (isDead != null && isDead!) {
+      return '$label ☠️';
+    }
+    if (isWinner != null && isWinner!) {
+      return '$label 👑';
+    }
+
+    if (ratingState != null) {
+      return _labelWithRating;
+    }
+
+    return label;
+  }
+
+  String get _labelWithRating {
+    switch (ratingState!) {
+      case RatingState.none:
+        return label;
+      case RatingState.dropped:
+        return '$label 🔻';
+      case RatingState.increased:
+        return '$label 🔼';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Text(
+          _cellLabel,
+          style: TextStyle(color: color),
+        ),
       ),
     );
   }

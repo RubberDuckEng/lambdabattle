@@ -436,15 +436,24 @@ class GameHistory {
     return deadPlayers.contains(name);
   }
 
-  bool ratingDropped(String name) {
-    if (gameCount == 0) return false;
+  RatingState ratingState(String name) {
+    if (gameCount == 0) return RatingState.none;
     final lastRating = lastGameRating[name];
     final currentRating = rating[name];
+
     if (currentRating != null && lastRating != null) {
-      return currentRating < lastRating;
+      if (currentRating == lastRating) return RatingState.none;
+      if (currentRating < lastRating) return RatingState.dropped;
+      if (currentRating > lastRating) return RatingState.increased;
     }
-    return false;
+    return RatingState.none;
   }
+}
+
+enum RatingState {
+  none,
+  dropped,
+  increased,
 }
 
 abstract class Agent extends Player {
